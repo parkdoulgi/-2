@@ -6,18 +6,18 @@ import time
 # 페이지 레이아웃 설정
 st.set_page_config(page_title="란체스터 턴제 작전 시뮬레이터", layout="wide")
 
-st.title("⚔️ 란체스터 작전 시뮬레이터 (NATO 군사 기호 v2.5)")
-st.write("양측의 군세를 설정하고 작전을 개시하면, 표준 NATO 군사 기호(Mil-Std-2525)와 잔존 병력 게이지가 실시간으로 매 턴 업데이트됩니다.")
+st.title("⚔️ 란체스터 작전 시뮬레이터 (진영별 제대 분리 v2.6)")
+st.write("아군과 적군의 제대 규모를 각각 설정할 수 있습니다. 제대 규모를 선택하면 해당 제대의 표준 인원수가 하단 수량에 자동으로 반영됩니다.")
 
-# 1. 부대 규모(제대) 정의 및 NATO 표준 기호 표시용 식별자
+# 1. 부대 규모(제대) 정의 및 NATO 표준 기호, 기본 인원수(default_weight) 지정
 UNIT_SCALES = {
-    "분대 (Squad - 약 10명) [●]": {"weight": 10, "icon_text": "●"},
-    "소대 (Platoon - 약 30명) [●●]": {"weight": 30, "icon_text": "●●"},
-    "중대 (Company - 약 120명) [I]": {"weight": 120, "icon_text": "I"},
-    "대대 (Battalion - 약 500명) [II]": {"weight": 500, "icon_text": "II"},
-    "연대 (Regiment - 약 1,500명) [III]": {"weight": 1500, "icon_text": "III"},
-    "여단 (Brigade - 약 3,500명) [X]": {"weight": 3500, "icon_text": "X"},
-    "사단 (Division - 약 12,000명) [XX]": {"weight": 12000, "icon_text": "XX"},
+    "분대 (Squad) [●]": {"weight": 10, "icon_text": "●", "default_men": 10},
+    "소대 (Platoon) [●●]": {"weight": 30, "icon_text": "●●", "default_men": 30},
+    "중대 (Company) [I]": {"weight": 120, "icon_text": "I", "default_men": 120},
+    "대대 (Battalion) [II]": {"weight": 500, "icon_text": "II", "default_men": 500},
+    "연대 (Regiment) [III]": {"weight": 1500, "icon_text": "III", "default_men": 1500},
+    "여단 (Brigade) [X]": {"weight": 3500, "icon_text": "X", "default_men": 3500},
+    "사단 (Division) [XX]": {"weight": 12000, "icon_text": "XX", "default_men": 12000},
 }
 
 # 2. 핵심 군사 전술 정의
@@ -48,45 +48,31 @@ RANDOM_EVENTS = [
     {"title": "공산군 결사 항전", "blue": 0.9, "red": 1.3, "desc": "배수의 진을 친 공산군의 반격 (+30%)"}
 ]
 
-# 🎨 NATO 표준 전술 기호(APP-6/Mil-Std-2525)를 실시간 렌더링하는 함수 (SVG 기반)
+# 🎨 NATO 표준 전술 기호 SVG 렌더링 함수
 def render_nato_symbol(affiliation, branch, scale_text):
-    """
-    affiliation: 'blue' (아군: 사각형 프레임) 또는 'red' (적군: 다이아몬드 프레임)
-    branch: 보병, 기갑, 포병, 정보/드론, 항공
-    scale_text: ●●, I, II, X 등 제대 표시 마커
-    """
-    # 진영별 색상 및 프레임(테두리 사각형 vs 다이아몬드) 크기 설정
     if affiliation == "blue":
-        box_color = "#4A90E2"  # 우군 청색
+        box_color = "#4A90E2"
         bg_color = "rgba(74, 144, 226, 0.15)"
         frame_svg = '<rect x="25" y="25" width="50" height="50" rx="3" fill="{bg}" stroke="{stroke}" stroke-width="3"/>'
     else:
-        box_color = "#E24A4A"  # 적군 적색
+        box_color = "#E24A4A"
         bg_color = "rgba(226, 74, 74, 0.15)"
-        # 다이아몬드(마름모) 형태
         frame_svg = '<polygon points="50,20 80,50 50,80 20,50" fill="{bg}" stroke="{stroke}" stroke-width="3"/>'
     
     frame_svg = frame_svg.format(bg=bg_color, stroke=box_color)
 
-    # 병과 기호 내부 심볼 디자인 지정
     inner_symbol = ""
     if "보병" in branch:
-        # 보병: 교차하는 X선 (참호전 엑스반도 유래)
         inner_symbol = f'<line x1="30" y1="30" x2="70" y2="70" stroke="{box_color}" stroke-width="2.5"/><line x1="70" y1="30" x2="30" y2="70" stroke="{box_color}" stroke-width="2.5"/>'
     elif "기갑" in branch:
-        # 기갑: 궤도를 뜻하는 타원형 원
         inner_symbol = f'<ellipse cx="50" cy="50" rx="18" ry="8" fill="none" stroke="{box_color}" stroke-width="2.5"/>'
     elif "포병" in branch:
-        # 포병: 포탄을 뜻하는 중앙에 꽉 찬 검은 점/원
         inner_symbol = f'<circle cx="50" cy="50" r="6" fill="{box_color}"/>'
     elif "드론" in branch or "정보" in branch:
-        # 정보/UAV: 레이더 스캔 형태의 번개선 기호처럼 표현
         inner_symbol = f'<polyline points="40,35 60,35 45,52 60,52 45,68" fill="none" stroke="{box_color}" stroke-width="2.5"/>'
     elif "항공" in branch:
-        # 항공(회전익/고정익): 프로펠러 모양의 하단 곡선 아치 형태
         inner_symbol = f'<path d="M32,60 Q50,30 68,60" fill="none" stroke="{box_color}" stroke-width="2.5"/>'
 
-    # 완성된 SVG 코드 조립 (상단에 크기별 제대 표시 기호 가산)
     svg_code = f"""
     <svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
         <text x="50" y="15" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="{box_color}" text-anchor="middle">{scale_text}</text>
@@ -99,16 +85,12 @@ def render_nato_symbol(affiliation, branch, scale_text):
 st.markdown("---")
 
 # [상단 종합 전장 변수 영역] ----------------------------------------------------
-st.subheader("🌐 글로벌 전장 인프라 설정")
-c_env1, c_env2, c_env3 = st.columns(3)
+st.subheader("🌐 글로벌 전장 환경 설정")
+c_env1, c_env2 = st.columns(2)
 
 with c_env1:
-    selected_scale = st.selectbox("📏 작전 부대 체급 (제대 규모)", options=list(UNIT_SCALES.keys()), index=3)
-    scale_weight = UNIT_SCALES[selected_scale]["weight"]
-    scale_icon = UNIT_SCALES[selected_scale]["icon_text"]
-with c_env2:
     terrain = st.selectbox("⛰️ 전장 지형 선택", ["평지", "야지 (산악)", "시가지"])
-with c_env3:
+with c_env2:
     tactics_relation = st.selectbox("⚔️ 초기 배치 상태", ["공평한 조우전", "자유진영 진지방어", "공산진영 진지방어"])
 
 st.markdown("---")
@@ -119,28 +101,48 @@ col1, col2 = st.columns(2)
 with col1:
     st.header("🔵 자유진영 (Free World)")
     blue_tactics = st.selectbox("자유진영 작전 교리", list(TACTICAL_OPTIONS.keys()), key="b_tac")
-    blue_unit_count = st.number_input("참전 제대 개수 (부대 수)", min_value=1, value=1, key="b_uc")
+    
+    # 🌟 자유진영 독립 제대 규모 설정 및 수량 자동화 연동
+    b_scale_select = st.selectbox("📏 자유군 제대 규모 선택", options=list(UNIT_SCALES.keys()), index=3, key="b_scale")
+    b_weight = UNIT_SCALES[b_scale_select]["weight"]
+    b_icon = UNIT_SCALES[b_scale_select]["icon_text"]
+    b_default_men = UNIT_SCALES[b_scale_select]["default_men"]
+    
+    blue_unit_count = st.number_input("자유군 참전 제대 개수 (부대 수)", min_value=1, value=1, key="b_uc")
     
     st.write("**[제대 편제 및 주력 병과 기호 설정]**")
     blue_main_branch = st.selectbox("대표 군사 기호 선택 (아군)", list(BRANCH_POWER.keys()), index=0, key="b_mb")
     
     blue_regular = {}
     for branch in BRANCH_POWER.keys():
-        blue_regular[branch] = st.number_input(f"자유 {branch} 수량", min_value=0, value=10 if "보병" in branch else 0, key=f"b_{branch}")
+        # 🌟 보병 수량의 초기값(value)을 제대 규모의 기본 인원수로 자동 할당
+        default_val = b_default_men if "보병" in branch else 0
+        blue_regular[branch] = st.number_input(f"자유 {branch} 수량", min_value=0, value=default_val, key=f"b_{branch}")
+        
     blue_guerrilla = st.number_input("자유 민병대/게릴라 (명)", min_value=0, value=0, key="b_g")
-    blue_morale = st.slider("지휘관 역량 및 사기", 0.5, 2.0, 1.0, 0.1, key="b_m")
+    blue_morale = st.slider("자휘관 역량 및 사기", 0.5, 2.0, 1.0, 0.1, key="b_m")
 
 with col2:
     st.header("🔴 공산진영 (Communist Bloc)")
     red_tactics = st.selectbox("공산진영 작전 교리", list(TACTICAL_OPTIONS.keys()), key="r_tac")
-    red_unit_count = st.number_input("참전 제대 개수 (부대 수)", min_value=1, value=1, key="r_uc")
+    
+    # 🌟 공산진영 독립 제대 규모 설정 및 수량 자동화 연동
+    r_scale_select = st.selectbox("📏 공산군 제대 규모 선택", options=list(UNIT_SCALES.keys()), index=3, key="r_scale")
+    r_weight = UNIT_SCALES[r_scale_select]["weight"]
+    r_icon = UNIT_SCALES[r_scale_select]["icon_text"]
+    r_default_men = UNIT_SCALES[r_scale_select]["default_men"]
+    
+    red_unit_count = st.number_input("공산군 참전 제대 개수 (부대 수)", min_value=1, value=1, key="r_uc")
     
     st.write("**[제대 편제 및 주력 병과 기호 설정]**")
     red_main_branch = st.selectbox("대표 군사 기호 선택 (적군)", list(BRANCH_POWER.keys()), index=1, key="r_mb")
     
     red_regular = {}
     for branch in BRANCH_POWER.keys():
-        red_regular[branch] = st.number_input(f"공산 {branch} 수량", min_value=0, value=10 if "보병" in branch else 0, key=f"r_{branch}")
+        # 🌟 보병 수량의 초기값(value)을 제대 규모의 기본 인원수로 자동 할당
+        default_val = r_default_men if "보병" in branch else 0
+        red_regular[branch] = st.number_input(f"공산 {branch} 수량", min_value=0, value=default_val, key=f"r_{branch}")
+        
     red_guerrilla = st.number_input("공산 파르티잔/반군 (명)", min_value=0, value=0, key="r_g")
     red_morale = st.slider("지휘관 역량 및 사기", 0.5, 2.0, 1.0, 0.1, key="r_m")
 
@@ -149,12 +151,13 @@ st.markdown("---")
 # [턴제 시뮬레이션 구동 엔진] ----------------------------------------------------
 if st.button("⚔️ NATO 군사 심볼 작전 시뮬레이션 개시", type="primary", use_container_width=True):
     
-    # 1. 초기 총 원 계산
+    # 1. 초기 총 원 계산 (각 진영의 고유한 제대 가중치 적용)
     blue_single_total = sum(blue_regular.values())
     red_single_total = sum(red_regular.values())
     
-    blue_start_HP = (blue_single_total * blue_unit_count * scale_weight) + blue_guerrilla
-    red_start_HP = (red_single_total * red_unit_count * scale_weight) + red_guerrilla
+    # 각자 선택한 체급(b_weight, r_weight)이 반영되어 총원(HP) 계산
+    blue_start_HP = (blue_single_total * blue_unit_count * b_weight) + blue_guerrilla
+    red_start_HP = (red_single_total * red_unit_count * r_weight) + red_guerrilla
     
     # 2. 기초 화력 계산 가중치 맵 구성
     blue_power_map = BRANCH_POWER.copy()
@@ -184,14 +187,12 @@ if st.button("⚔️ NATO 군사 심볼 작전 시뮬레이션 개시", type="pr
     
     st.subheader("🎬 지휘통제소 작전 상황판 (COP)")
     
-    # 상단에 NATO 심볼 고정 전개 배치를 위한 레이아웃 공간 마련
     symbol_zone = st.empty()
     log_placeholder = st.empty()
     
     turn = 1
     max_turns = 12
     
-    # 실시간 비주얼 갱신용 루프 코드
     while B_HP > 0 and R_HP > 0 and turn <= max_turns:
         evt = random.choice(RANDOM_EVENTS)
         
@@ -210,21 +211,20 @@ if st.button("⚔️ NATO 군사 심볼 작전 시뮬레이션 개시", type="pr
         B_HP = max(0.0, B_HP - r_inflict)
         R_HP = max(0.0, R_HP - b_inflict)
         
-        # 📊 1. 상단 NATO 전술 부대 심볼 배치 전개 (SVG 실시간 주입)
-        blue_svg = render_nato_symbol("blue", blue_main_branch, scale_icon)
-        red_svg = render_nato_symbol("red", red_main_branch, scale_icon)
+        # 📊 각 진영이 설정한 각각의 고유 아이콘 표기(b_icon, r_icon)를 토대로 NATO 심볼 렌더링
+        blue_svg = render_nato_symbol("blue", blue_main_branch, b_icon)
+        red_svg = render_nato_symbol("red", red_main_branch, r_icon)
         
         with symbol_zone.container():
             sz_col1, sz_vs, sz_col2 = st.columns([4, 2, 4])
             with sz_col1:
-                st.markdown(f"<div style='text-align: center;'>{blue_svg}<br><b>자유군 주력부대</b></div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='text-align: center;'>{blue_svg}<br><b>자유군 주력부대 ({b_scale_select.split(' ')[0]})</b></div>", unsafe_allow_html=True)
             with sz_vs:
                 st.markdown("<h2 style='text-align: center; line-height: 100px; color: #777;'>VS</h2>", unsafe_allow_html=True)
             with sz_col2:
-                st.markdown(f"<div style='text-align: center;'>{red_svg}<br><b>공산군 주력부대</b></div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='text-align: center;'>{red_svg}<br><b>공산군 주력부대 ({r_scale_select.split(' ')[0]})</b></div>", unsafe_allow_html=True)
             st.markdown("<br>", unsafe_allow_html=True)
 
-        # 📊 2. 하단 잔존 지수 및 대미지 로그 출력
         with log_placeholder.container():
             st.markdown(f"### ⚔️ **제 {turn} 턴 교전 상황** (전장의 안개: `{evt['title']}`)")
             st.caption(f"💬 *지휘소 보고: {evt['desc']}*")
@@ -244,7 +244,7 @@ if st.button("⚔️ NATO 군사 심볼 작전 시뮬레이션 개시", type="pr
             st.markdown("---")
             
         turn += 1
-        time.sleep(1.0) # 1초마다 시각적 로그와 NATO 기호 정보 갱신
+        time.sleep(1.0)
 
     # 🏁 최종 결과
     st.header("🏁 작전통제실 최종 전과 분석")
