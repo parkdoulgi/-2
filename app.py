@@ -265,3 +265,47 @@ if st.button("⚔️ NATO 군사 심볼 작전 시뮬레이션 개시", type="pr
         st.error(f"💀 **작전 실패...** 적 {r_type.split(' ')[0]}의 전력을 이기지 못하고 전선이 붕괴되었습니다.")
     else:
         st.warning("🤝 **상호 파멸:** 치명적인 소모전 끝에 양측 모두 전투력을 상실했습니다.")
+
+import streamlit as st
+
+# [디자인 커스텀 CSS]
+st.markdown("""
+    <style>
+    /* 전체 배경을 전술 모니터 느낌의 어두운 색으로 설정 */
+    .stApp {
+        background-color: #0a0e0a;
+        color: #00ff41; /* 군용 모니터의 상징인 형광 녹색 텍스트 */
+        font-family: 'Courier New', Courier, monospace;
+    }
+    
+    /* 헤더 스타일링 */
+    h1, h2, h3 {
+        color: #00ff41 !important;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        border-bottom: 1px solid #00ff41;
+    }
+    
+    /* 버튼 디자인: 투박한 군용 버튼 느낌 */
+    div.stButton > button {
+        background-color: #1a2a1a !important;
+        color: #00ff41 !important;
+        border: 2px solid #00ff41 !important;
+        border-radius: 0px !important;
+        font-weight: bold;
+    }
+    
+    /* 경고/성공 메시지 박스 스타일 */
+    .stAlert {
+        background-color: #1a2a1a !important;
+        border: 1px solid #00ff41 !important;
+    }
+    
+    /* 프로그레스 바 스타일 */
+    .stProgress > div > div > div {
+        background-color: #00ff41 !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# 이후 기존의 시뮬레이션 코드들이 이어집니다...
