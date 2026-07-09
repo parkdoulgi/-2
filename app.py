@@ -309,3 +309,43 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # 이후 기존의 시뮬레이션 코드들이 이어집니다...
+
+import streamlit as st
+import google.generativeai as genai # AI 연동용
+import random
+import time
+
+# [Gemini 설정] - Streamlit Secrets에 저장된 API Key 사용 권장
+# 만약 없다면 st.text_input으로 직접 입력받을 수 있습니다.
+api_key = st.sidebar.text_input("Gemini API Key를 입력하세요", type="password")
+if api_key:
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel('gemini-pro')
+
+# (기존 디자인 CSS 및 변수 정의는 동일하게 유지...)
+
+# [AI 지휘관 판단 함수]
+def ai_commander_logic(faction, HP, enemy_HP, start_HP, terrain, event_desc):
+    prompt = f"""
+    당신은 {faction}의 총사령관입니다. 
+    현재 상황: 아군병력 {int(HP)}명, 적군병력 {int(enemy_HP)}명.
+    전장 지형: {terrain}. 돌발 상황: {event_desc}.
+    다음 전술 중 하나를 선택하세요: ['정면 공격', '포위 / 이중 포위', '전격전 / 기갑 돌격', '종심 방어', '소모전 / 파상공세']
+    선택한 전술 이름과 그 이유를 딱 2줄로 요약해서 답변하세요.
+    """
+    response = model.generate_content(prompt)
+    return response.text
+
+# [메인 루프 수정]
+ai_mode = st.checkbox("AI 지휘관 모드 활성화 (Gemini가 실시간 지휘)")
+
+if st.button("전투 시작"):
+    # ... (전투 초기화 루프)
+    while B_HP > 0 and R_HP > 0:
+        if ai_mode and api_key:
+            # AI가 매 턴 상황을 보고 전술을 결정
+            blue_tactics = ai_commander_logic("자유군", B_HP, R_HP, blue_start_HP, terrain, evt['desc'])
+            st.write(f"🤖 **AI 지휘관의 판단:** {blue_tactics}")
+            # 여기서 선택된 전술 문자열을 기반으로 b_tac을 업데이트하는 로직 추가
+            
+        # ... (나머지 전투 계산 로직)
