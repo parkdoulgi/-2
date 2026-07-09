@@ -335,32 +335,3 @@ def ai_commander_logic(faction, HP, enemy_HP, start_HP, terrain, event_desc):
     """
     response = model.generate_content(prompt)
     return response.text
-
-# [메인 루프 수정]
-ai_mode = st.checkbox("AI 지휘관 모드 활성화 (Gemini가 실시간 지휘)")
-
-if st.button("전투 시작"):
-    # ... (전투 초기화 루프)
-    while B_HP > 0 and R_HP > 0:
-        if ai_mode and api_key:
-            # AI가 매 턴 상황을 보고 전술을 결정
-            blue_tactics = ai_commander_logic("자유군", B_HP, R_HP, blue_start_HP, terrain, evt['desc'])
-            st.write(f"🤖 **AI 지휘관의 판단:** {blue_tactics}")
-            # 여기서 선택된 전술 문자열을 기반으로 b_tac을 업데이트하는 로직 추가
-            
-        # ... (나머지 전투 계산 로직)
-# [진영별 입력 및 기타 설정 코드들...]
-
-# 버튼을 눌렀을 때만 전투 시작 루프가 실행되도록 구조화
-if st.button("⚔️ NATO 군사 심볼 작전 시뮬레이션 개시", type="primary"):
-    
-    # 1. 여기서 변수들을 먼저 선언해야 합니다!
-    blue_start_HP = float(b_stat_men)
-    red_start_HP = float(r_stat_men)
-    B_HP = blue_start_HP
-    R_HP = red_start_HP
-    
-    # 2. 그 다음 while 루프가 따라와야 합니다.
-    while B_HP > 0 and R_HP > 0:
-        # 전투 로직...
-        # ...
