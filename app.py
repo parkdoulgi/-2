@@ -349,3 +349,18 @@ if st.button("전투 시작"):
             # 여기서 선택된 전술 문자열을 기반으로 b_tac을 업데이트하는 로직 추가
             
         # ... (나머지 전투 계산 로직)
+# [진영별 입력 및 기타 설정 코드들...]
+
+# 버튼을 눌렀을 때만 전투 시작 루프가 실행되도록 구조화
+if st.button("⚔️ NATO 군사 심볼 작전 시뮬레이션 개시", type="primary"):
+    
+    # 1. 여기서 변수들을 먼저 선언해야 합니다!
+    blue_start_HP = float(b_stat_men)
+    red_start_HP = float(r_stat_men)
+    B_HP = blue_start_HP
+    R_HP = red_start_HP
+    
+    # 2. 그 다음 while 루프가 따라와야 합니다.
+    while B_HP > 0 and R_HP > 0:
+        # 전투 로직...
+        # ...
